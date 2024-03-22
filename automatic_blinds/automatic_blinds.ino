@@ -25,6 +25,8 @@
 #define LIGHT_DEADZONE 100
 #define TEMPERATURE_DEADZONE 20
 
+#define MOTION_RANGE 250
+
 volatile bool buttonToggle = false;
 
 const int stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
@@ -80,6 +82,7 @@ void loop() {
   Serial.println("---");
   
   static bool temp_state = 0;
+  static bool prev_temp_state = 0;
   if (temperature_value > TEMPERATURE_THRESHOLD + TEMPERATURE_DEADZONE) {
     temp_state = 1;
   }
@@ -88,6 +91,7 @@ void loop() {
   }
 
   static bool light_state = 0;
+  static bool prev_light_state = 0;
   if (light_value > LIGHT_THRESHOLD + LIGHT_DEADZONE)  {
     light_state = 1;
   }
@@ -95,18 +99,37 @@ void loop() {
     light_state = 0;
   }
 
-  if (light_state && temp_state) {
-    setPosition(50); //close blinds upwards to block light
+  if (temp_state!=prev_temp_state || light_state!=prev_light_state || !buttonToggle) {
+    if (light_state && temp_state) {
+      setPosition(MOTION_RANGE); //close blinds upwards to block light
+    }
+    else if (light_state && !temp_state) {
+      setPosition(0); //open blinds to increase temperature
+    }
+    else if (!light_state && temp_state) {
+      setPosition(-MOTION_RANGE); //close blinds downwards to let cold air in
+    }
+    else {
+      setPosition(MOTION_RANGE); //close blinds upwards to block cold drafts
+    }
+    buttonToggle = false;
   }
-  else if (light_state && !temp_state) {
-    setPosition(0); //open blinds to increase temperature
+
+
+  if (buttonToggle) {
+    if (light_state && !temp_state) {
+      setPosition(-MOTION_RANGE); //toggle blinds closed downwards
+    }
+    else if (!light_state && temp_state) {
+      setPosition(0); //toggle blinds open
+    }
+    else {
+      setPosition(MOTION_RANGE); //toggle blinds closed upwards
+    }
   }
-  else if (!light_state && temp_state) {
-    setPosition(-50); //close blinds downwards to let cold air in
-  }
-  else {
-    setPosition(50); //close blinds upwards to block cold drafts
-  }
+
+  prev_temp_state = temp_state;
+  prev_light_state = light_state;
 
   delay(1000);
 }
