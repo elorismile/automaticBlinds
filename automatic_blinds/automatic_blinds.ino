@@ -13,6 +13,7 @@
 */
 
 #include <Stepper.h>
+#include <stdarg.h>
 
 #define LIGHT_PIN A0
 #define TEMPERATURE_PIN A1
@@ -24,7 +25,7 @@
 #define LIGHT_DEADZONE 100
 #define TEMPERATURE_DEADZONE 20
 
-//int stepper_position = 0; //store current stepper position
+volatile bool buttonToggle = false;
 
 const int stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
 const int rolePerMinute = 12;         // Adjustable range of 28BYJ-48 stepper is 0~17 rpm
@@ -48,10 +49,16 @@ void setPosition(int target_position) {
   disengageStepper();
 }
 
+void button_ISR() {
+  buttonToggle = !buttonToggle;
+}
+
 void setup() {
   pinMode(LIGHT_PIN, INPUT);
   pinMode(TEMPERATURE_PIN, INPUT);
   pinMode(BUTTON_PIN, INPUT);
+
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), button_ISR, RISING);
   
   myStepper.setSpeed(rolePerMinute);
   // initialize the serial port:
@@ -62,8 +69,15 @@ void loop() {
   int light_value = analogRead(LIGHT_PIN);
   int temperature_value = analogRead(TEMPERATURE_PIN);
 
+  static bool toggle = 0;
+  if (digitalRead(BUTTON_PIN)) {
+    toggle = !toggle;
+  }
+
   Serial.println(light_value);
   Serial.println(temperature_value);
+  Serial.println(buttonToggle);
+  Serial.println("---");
   
   static bool temp_state = 0;
   if (temperature_value > TEMPERATURE_THRESHOLD + TEMPERATURE_DEADZONE) {
@@ -94,5 +108,5 @@ void loop() {
     setPosition(50); //close blinds upwards to block cold drafts
   }
 
-  delay(500);
+  delay(1000);
 }
