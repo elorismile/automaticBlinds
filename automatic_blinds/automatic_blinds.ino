@@ -62,36 +62,37 @@ void loop() {
   int light_value = analogRead(LIGHT_PIN);
   int temperature_value = analogRead(TEMPERATURE_PIN);
 
-  static int state = 9;
-  int setpoint = -3;
-
   Serial.println(light_value);
   Serial.println(temperature_value);
-  if (light_value > LIGHT_THRESHOLD + LIGHT_DEADZONE) {
-    if (temperature_value > TEMPERATURE_THRESHOLD + TEMPERATURE_DEADZONE) {
-      setpoint = 500; //close up
-      state = 0;
-    }
-    else if (temperature_value < TEMPERATURE_THRESHOLD - TEMPERATURE_DEADZONE) {
-      setpoint = 0; //set to open
-      state = 1;
-    }
-    
+  
+  static bool temp_state = 0;
+  if (temperature_value > TEMPERATURE_THRESHOLD + TEMPERATURE_DEADZONE) {
+    temp_state = 1;
+  }
+  else if (temperature_value < TEMPERATURE_THRESHOLD - TEMPERATURE_DEADZONE) {
+    temp_state = 0;
+  }
+
+  static bool light_state = 0;
+  if (light_value > LIGHT_THRESHOLD + LIGHT_DEADZONE)  {
+    light_state = 1;
   }
   else if (light_value < LIGHT_THRESHOLD - LIGHT_DEADZONE) {
-    if (temperature_value > TEMPERATURE_THRESHOLD + TEMPERATURE_DEADZONE) {
-      setpoint = -500; //close down
-      state = 2;
-    }
-    else if (temperature_value < TEMPERATURE_THRESHOLD - TEMPERATURE_DEADZONE) {
-      setpoint = 500; //close up
-      state = 3;
-    }
+    light_state = 0;
   }
 
-
-  setPosition(setpoint);
-  Serial.println(state);
+  if (light_state && temp_state) {
+    setPosition(50); //close blinds upwards to block light
+  }
+  else if (light_state && !temp_state) {
+    setPosition(0); //open blinds to increase temperature
+  }
+  else if (!light_state && temp_state) {
+    setPosition(-50); //close blinds downwards to let cold air in
+  }
+  else {
+    setPosition(50); //close blinds upwards to block cold drafts
+  }
 
   delay(500);
 }
